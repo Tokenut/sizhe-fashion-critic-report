@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fashion Critic-Refine Pipeline Report</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3347;
+    --text: #e4e6f0;
+    --text2: #9ca0b4;
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --green: #00cec9;
+    --green-bg: rgba(0,206,201,0.12);
+    --yellow: #fdcb6e;
+    --yellow-bg: rgba(253,203,110,0.12);
+    --red: #ff7675;
+    --red-bg: rgba(255,118,117,0.12);
+    --blue: #74b9ff;
+    --blue-bg: rgba(116,185,255,0.12);
+    --orange: #e17055;
+    --purple: #a29bfe;
+    --pink: #fd79a8;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 60px 0 40px;
+    position: relative;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(108,92,231,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .header h1 {
+    font-size: 42px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent2), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1px;
+  }
+  .header .subtitle {
+    font-size: 16px;
+    color: var(--text2);
+    margin-top: 8px;
+  }
+  .header .meta-pills {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .pill .val { color: var(--text); font-weight: 600; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .card-header .icon {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .card-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  .card-header .badge {
+    margin-left: auto;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  @media (max-width: 768px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+
+  /* KPI Cards */
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .kpi.green::before { background: var(--green); }
+  .kpi.yellow::before { background: var(--yellow); }
+  .kpi.red::before { background: var(--red); }
+  .kpi.blue::before { background: var(--blue); }
+  .kpi .number {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -1px;
+  }
+  .kpi .label {
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+  .kpi .sub {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 2px;
+    opacity: 0.7;
+  }
+
+  /* Verdict bar */
+  .verdict-bar {
+    display: flex;
+    height: 32px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 16px 0;
+  }
+  .verdict-bar .seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    min-width: 30px;
+    transition: all 0.3s;
+  }
+  .verdict-bar .seg:hover { filter: brightness(1.2); }
+
+  /* Legend */
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 12px 0;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* Chart container */
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    max-height: 320px;
+  }
+  .chart-wrap.donut {
+    max-width: 280px;
+    max-height: none;
+    margin: 0 auto;
+    aspect-ratio: 1 / 1;
+  }
+  .chart-wrap canvas {
+    width: 100% !important;
+  }
+
+  /* Tables */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead { background: var(--surface2); }
+  th {
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text2);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tr:hover { background: rgba(108,92,231,0.05); }
+  .tag-tier {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tier-1 { background: var(--green-bg); color: var(--green); }
+  .tier-2 { background: var(--yellow-bg); color: var(--yellow); }
+  .tier-3 { background: var(--red-bg); color: var(--red); }
+
+  .status-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+
+  /* Progress bars */
+  .progress-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0;
+  }
+  .progress-label {
+    width: 160px;
+    font-size: 13px;
+    color: var(--text2);
+    flex-shrink: 0;
+    text-align: right;
+  }
+  .progress-track {
+    flex: 1;
+    height: 24px;
+    background: var(--surface2);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    transition: width 0.6s ease;
+  }
+  .progress-count {
+    width: 50px;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  /* Pipeline diagram */
+  .pipeline-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 24px 0;
+    flex-wrap: wrap;
+  }
+  .pipeline-node {
+    padding: 16px 24px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    min-width: 160px;
+    border: 2px solid;
+  }
+  .pipeline-node .node-name { font-weight: 700; font-size: 15px; }
+  .pipeline-node .node-desc { font-size: 12px; margin-top: 4px; opacity: 0.8; }
+  .pipeline-node .node-count {
+    font-size: 24px; font-weight: 700; margin-top: 8px;
+  }
+  .pipeline-arrow {
+    font-size: 24px;
+    color: var(--text2);
+    padding: 0 8px;
+  }
+
+  /* Insight boxes */
+  .insight {
+    padding: 16px 20px;
+    border-radius: var(--radius-sm);
+    border-left: 4px solid;
+    margin: 12px 0;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .insight.warning { background: var(--yellow-bg); border-color: var(--yellow); }
+  .insight.danger { background: var(--red-bg); border-color: var(--red); }
+  .insight.info { background: var(--blue-bg); border-color: var(--blue); }
+  .insight.success { background: var(--green-bg); border-color: var(--green); }
+  .insight strong { color: var(--text); }
+
+  /* Section divider */
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 40px 0;
+  }
+
+  /* Scrollable table */
+  .case-table-wrap {
+    max-height: 480px;
+    overflow-y: auto;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  .case-table-wrap thead { position: sticky; top: 0; z-index: 1; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--text2);
+    font-size: 13px;
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .card { animation: fadeUp 0.4s ease both; }
+  .card:nth-child(2) { animation-delay: 0.05s; }
+  .card:nth-child(3) { animation-delay: 0.1s; }
+  .card:nth-child(4) { animation-delay: 0.15s; }
+
+  /* Fix rate bar */
+  .fix-rate-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .fix-rate-track {
+    width: 80px; height: 6px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .fix-rate-fill {
+    height: 100%;
+    border-radius: 3px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <h1>Fashion Critic-Refine Pipeline</h1>
+  <p class="subtitle">Fashion Agent 回复质量评估与自动修复 测试报告</p>
+  <div class="meta-pills">
+    <span class="pill">Cases <span class="val" id="h-cases"></span></span>
+    <span class="pill">Model <span class="val" id="h-model"></span></span>
+    <span class="pill">Generated <span class="val" id="h-date"></span></span>
+    <span class="pill">Duration <span class="val" id="h-duration"></span></span>
+  </div>
+</div>
+
+<!-- KPI Row -->
+<div class="grid-4" id="kpi-row"></div>
+
+<div class="section-divider"></div>
+
+<!-- Verdict -->
+<div class="card">
+  <div class="card-header">
+    <div class="icon" style="background:var(--accent);color:#fff">V</div>
+    <h2>Validate 验证结果</h2>
+    <span class="badge" style="background:var(--green-bg);color:var(--green)" id="verdict-badge"></span>
+  </div>
+  <div class="verdict-bar" id="verdict-bar"></div>
+  <div class="legend" id="verdict-legend"></div>
+  <div class="insight info" id="verdict-insight"></div>
+</div>
+
+<!-- Dimension & Tier -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">
+      <div class="icon" style="background:var(--blue-bg);color:var(--blue)">D</div>
+      <h2>四维度分布</h2>
+    </div>
+    <div class="chart-wrap donut"><canvas id="chart-dim"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="icon" style="background:var(--yellow-bg);color:var(--yellow)">T</div>
+      <h2>可修复性分层</h2>
+    </div>
+    <div class="chart-wrap donut"><canvas id="chart-tier"></canvas></div>
+  </div>
+</div>
+
+<!-- Top Tags -->
+<div class="card">
+  <div class="card-header">
+    <div class="icon" style="background:var(--red-bg);color:var(--red)">#</div>
+    <h2>Critic 高频标签 Top 15</h2>
+    <span class="badge" style="background:var(--surface2);color:var(--text2)" id="tag-total-badge"></span>
+  </div>
+  <div class="chart-wrap" style="max-height:400px"><canvas id="chart-tags"></canvas></div>
+</div>
+
+<!-- Refine Analysis -->
+<div class="card">
+  <div class="card-header">
+    <div class="icon" style="background:var(--green-bg);color:var(--green)">R</div>
+    <h2>Refine 修复效果</h2>
+  </div>
+  <div class="grid-3" style="margin-bottom:20px" id="refine-kpis"></div>
+  <h3 style="font-size:15px;margin-bottom:12px;color:var(--text2)">Tier 1 修复率（必须修复）</h3>
+  <div id="tier1-fix-rates"></div>
+  <h3 style="font-size:15px;margin:20px 0 12px;color:var(--text2)">Tier 2 修复率（尽力修复）</h3>
+  <div id="tier2-fix-rates"></div>
+</div>
+
+<!-- Refine Side Effects -->
+<div class="card">
+  <div class="card-header">
+    <div class="icon" style="background:var(--red-bg);color:var(--red)">!</div>
+    <h2>Refine 引入的新问题</h2>
+  </div>
+  <div class="insight danger">
+    <strong>Refine 自检不足：</strong>修复过程中引入了原始 Critic 未检出的新标签。
+    其中 Tier 1 新增标签是导致 <code>fail</code> verdict 的主因，需优化 Refine PE Step 4 自检环节。
+  </div>
+  <div class="table-wrap" id="new-tags-table"></div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- Pipeline Attribution -->
+<div class="card">
+  <div class="card-header">
+    <div class="icon" style="background:var(--purple);color:#fff">P</div>
+    <h2>Pipeline 级问题归因（Tier 3）</h2>
+  </div>
+  <p style="color:var(--text2);font-size:14px;margin-bottom:20px">
+    以下问题 Refine 无法修复，需要在 Fashion Agent 上游 pipeline 改进。
+  </p>
+  <div class="pipeline-flow" id="pipeline-flow"></div>
+  <div class="chart-wrap" style="margin-top:20px"><canvas id="chart-pipeline"></canvas></div>
+</div>
+
+<!-- Recommendations -->
+<div class="card">
+  <div class="card-header">
+    <div class="icon" style="background:var(--accent);color:#fff">S</div>
+    <h2>结论与建议</h2>
+  </div>
+  <div id="recommendations"></div>
+</div>
+
+<div class="section-divider"></div>
+
+<!-- Case Detail Table -->
+<div class="card">
+  <div class="card-header">
+    <div class="icon" style="background:var(--surface2);color:var(--text2)">C</div>
+    <h2>逐 Case 明细</h2>
+    <span class="badge" style="background:var(--surface2);color:var(--text2)" id="case-count-badge"></span>
+  </div>
+  <div class="case-table-wrap" id="case-table"></div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  Fashion Critic-Refine Pipeline &middot; Auto-generated Report<br>
+  Critic PE: fashion_critic_pe_dist.md &middot; Refine PE: fashion_refine_pe.md &middot; Validate Spec: fashion_validate_spec.md
+</div>
+
+</div>
+
+<script>
+const DATA = {"meta": {"total_cases": 76, "completed": 76, "model": "gemini-2.0-flash", "concurrency": 3}, "overview": {"has_issue": 73, "no_issue": 3, "total_tags": 304, "avg_tags": 4.2, "refine_attempted": 73, "refine_success": 72, "improved": 35, "same": 16, "worsened": 21}, "verdicts": {"fail": 20, "partial": 39, "n/a": 4, "pass": 13}, "dimensions": {"需求理解": 27, "准确性": 145, "信息性": 113, "可读性": 19}, "tier_counts": {"1": 25, "2": 144, "3": 135}, "tier_tags": {"1": {"可读性-基础表达瑕疵": 18, "准确性-内生知识错误-常识": 5, "准确性-内生知识错误-自我认知": 1, "需求理解-过度发散": 1}, "2": {"准确性-信息整合错误": 17, "信息性-信息整合不足-信息缺失": 57, "准确性-多模理解错误": 1, "准确性-工具调用问题": 1, "准确性-上下文不一致": 4, "准确性-幻觉": 38, "可读性-code switch": 1, "信息性-信息整合不足-数量少": 15, "信息性-cite组件-归属错误": 2, "信息性-cite组件-遗漏": 6, "信息性-信息整合不足-内容同质": 2}, "3": {"需求理解-意图理解": 19, "准确性-多模理解错误-图片理解错": 11, "准确性-工具调用问题-参数不好": 11, "信息性-图片组件-低质": 17, "准确性-上下文不一致-图片错配": 45, "信息性-图片组件-遗漏": 6, "需求理解-错误拒答": 1, "准确性-工具调用问题-应调未调": 2, "信息性-工具调用-信息缺失": 1, "准确性-工具调用问题-不应调而调": 1, "信息性-图片组件-缺失": 6, "准确性-工具调用问题-策略不好": 2, "需求理解-上下文理解-错误关联": 2, "信息性-工具调用-内容同质": 1, "准确性-时间感知错误-信息过时": 3, "准确性-工具调用问题-工具不好": 3, "需求理解-上下文理解-未关联": 2, "需求理解-指令遵循": 2}}, "all_tags": {"信息性-信息整合不足-信息缺失": 57, "准确性-上下文不一致-图片错配": 45, "准确性-幻觉": 38, "需求理解-意图理解": 19, "可读性-基础表达瑕疵": 18, "准确性-信息整合错误": 17, "信息性-图片组件-低质": 17, "信息性-信息整合不足-数量少": 15, "准确性-多模理解错误-图片理解错": 11, "准确性-工具调用问题-参数不好": 11, "信息性-图片组件-遗漏": 6, "信息性-图片组件-缺失": 6, "信息性-cite组件-遗漏": 6, "准确性-内生知识错误-常识": 5, "准确性-上下文不一致": 4, "准确性-时间感知错误-信息过时": 3, "准确性-工具调用问题-工具不好": 3, "准确性-工具调用问题-应调未调": 2, "信息性-cite组件-归属错误": 2, "准确性-工具调用问题-策略不好": 2, "需求理解-上下文理解-错误关联": 2, "需求理解-上下文理解-未关联": 2, "信息性-信息整合不足-内容同质": 2, "需求理解-指令遵循": 2, "准确性-多模理解错误": 1}, "t1_residual": {"可读性-code switch-语言混杂": 1, "可读性-基础表达瑕疵": 11, "准确性-内生知识错误-常识": 8, "需求理解-过度发散": 2}, "t2_residual": {"信息性-信息整合不足-信息缺失": 53, "准确性-幻觉": 13, "准确性-上下文不一致-cite错配": 3, "准确性-信息整合错误": 13, "信息性-信息整合不足": 1, "信息性-cite组件-归属错误": 3, "信息性-信息整合不足-数量少": 16, "信息性-信息整合不足-非主流答案": 1, "准确性-工具调用问题": 1, "信息性-图片组件-错配": 1, "信息性-信息整合不足-内容同质": 1}, "new_tags_from_refine": {"准确性-上下文不一致-图片错配": 20, "准确性-多模理解错误-图片理解错": 16, "信息性-信息整合不足-数量少": 12, "准确性-信息整合错误": 10, "需求理解-意图理解": 9, "信息性-信息整合不足-信息缺失": 8, "信息性-图片组件-低质": 8, "准确性-幻觉": 8, "可读性-基础表达瑕疵": 7, "准确性-内生知识错误-常识": 7, "准确性-工具调用问题-参数不好": 5, "准确性-上下文不一致-cite错配": 3}, "pipeline_attribution": {"IntentAgent": 26, "ReactAgent": 21, "多模态/图片": 85, "其他": 3}, "timing": {"total_seconds": 4778, "avg": 62.9, "min": 13.6, "max": 178.8}, "case_details": [{"case_id": "CHAT_0122790ad992192be1d1791e40e3c53095ea97338ed0299f2789f1b2856c36b2", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-信息整合错误", "准确性-工具调用问题-参数不好", "信息性-信息整合不足-信息缺失"], "tag_count": 5, "verdict": "fail", "t1_residual": ["可读性-code switch-语言混杂"], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-工具调用问题-参数不好", "准确性-上下文不一致-图片错配"], "elapsed": 79.0, "refine_success": true}, {"case_id": "CHAT_08f37537e9a5ed8c68345168d0426ba1d7e07cdde48c1d580029f62e0c2da69e", "has_issue": true, "hit_tags": ["信息性-信息整合不足-信息缺失"], "tag_count": 1, "verdict": "fail", "t1_residual": ["可读性-基础表达瑕疵"], "t2_residual": [], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 61.3, "refine_success": true}, {"case_id": "CHAT_00e49d579eed53d00395992349df631368582e5a55be73f8ba3e8ef989b68b1c", "has_issue": true, "hit_tags": ["准确性-多模理解错误", "准确性-工具调用问题", "准确性-上下文不一致", "信息性-图片组件-低质"], "tag_count": 4, "verdict": "fail", "t1_residual": ["准确性-内生知识错误-常识"], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 83.2, "refine_success": true}, {"case_id": "CHAT_093258b9c9f0347714edbc4465985a78b6fdaf25d4e66f80840ba6eaad975e29", "has_issue": true, "hit_tags": ["准确性-多模理解错误-图片理解错", "准确性-幻觉", "准确性-信息整合错误", "信息性-图片组件-低质", "信息性-信息整合不足-信息缺失"], "tag_count": 5, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-幻觉", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 69.9, "refine_success": true}, {"case_id": "CHAT_0701e68af144c38d27aa8e9d40e92ebd46ba539c25339ff455380d7b835e2c06", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-信息整合错误", "准确性-上下文不一致", "可读性-code switch", "信息性-信息整合不足-信息缺失"], "tag_count": 5, "verdict": "fail", "t1_residual": ["可读性-基础表达瑕疵"], "t2_residual": ["准确性-上下文不一致-cite错配", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 57.0, "refine_success": true}, {"case_id": "CHAT_07214b45d71feadd5d6f1d5d7c61132640f6a23f7af59e07c38f8e4f51d86fe8", "has_issue": false, "hit_tags": [], "tag_count": 0, "verdict": "n/a", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 18.7, "refine_success": false}, {"case_id": "CHAT_072ef48083afd4566ba1be3114a15890b8fe67a3441eaf8a56dcf73b5dc316df", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-数量少", "信息性-图片组件-遗漏"], "tag_count": 4, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 62.8, "refine_success": true}, {"case_id": "CHAT_071996cb8a87aa94396d12659c1d85ef2dd4419c5bce618162d5051f000ff3f9", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-信息整合错误", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失", "信息性-图片组件-低质", "信息性-图片组件-遗漏"], "tag_count": 6, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-信息整合错误", "信息性-信息整合不足", "信息性-cite组件-归属错误"], "t3_persistent": ["准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配"], "elapsed": 76.6, "refine_success": true}, {"case_id": "CHAT_01cd65f7b57048192dbd2c42b3f22049567a612d18539369c345e5a7f87f9bab", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配", "准确性-工具调用问题-策略不好"], "elapsed": 57.0, "refine_success": true}, {"case_id": "CHAT_0a2ccf8d58283d9dd75f93fdefd6ab43bba48c30b12e9f9583435b804e757b24", "has_issue": true, "hit_tags": ["准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 2, "verdict": "fail", "t1_residual": ["准确性-内生知识错误-常识"], "t2_residual": ["准确性-幻觉", "信息性-cite组件-归属错误", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配", "信息性-图片组件-低质"], "elapsed": 76.6, "refine_success": true}, {"case_id": "CHAT_009c4daa41cbb1f5316374db88a5a56f978517a0bb898fdbfaec5bef70786217", "has_issue": true, "hit_tags": ["需求理解-错误拒答", "准确性-工具调用问题-应调未调", "信息性-信息整合不足-信息缺失", "信息性-工具调用-信息缺失"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错"], "elapsed": 23.1, "refine_success": true}, {"case_id": "CHAT_039686bcd2284bfe247240563b6078def3e9c1d4e22a81967be590b4046477dd", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-幻觉", "准确性-多模理解错误-图片理解错", "准确性-工具调用问题-参数不好", "准确性-工具调用问题-不应调而调", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 7, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-多模理解错误-图片理解错", "准确性-工具调用问题-应调未调", "准确性-上下文不一致-图片错配"], "elapsed": 68.2, "refine_success": true}, {"case_id": "CHAT_01f772080965c9ff42f1502d1667046d41fed372a8f288165d84a014f8d02f69", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 56.3, "refine_success": true}, {"case_id": "CHAT_0381215ead68f068ad86b989a13a914ec3e3789586194658353b0853c80c2570", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-信息整合错误", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失", "信息性-图片组件-低质"], "tag_count": 5, "verdict": "fail", "t1_residual": ["准确性-内生知识错误-常识"], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 74.1, "refine_success": true}, {"case_id": "CHAT_02933d86fcd96051689287408be6b1406743f2d4a075eb560e25d6f48d2d8f3e", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-内生知识错误-常识", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "fail", "t1_residual": ["可读性-基础表达瑕疵"], "t2_residual": ["信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失", "准确性-幻觉"], "t3_persistent": ["需求理解-意图理解", "准确性-上下文不一致-图片错配"], "elapsed": 66.1, "refine_success": true}, {"case_id": "CHAT_083e35b13c800c9f9a508dc95df632d4a475fddb22c8288394c52216560b4999", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "tag_count": 5, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 178.8, "refine_success": true}, {"case_id": "CHAT_0140dfe47aef5b91763dcabf283af82f2013a59f612ce2f18d06744c6df7c52a", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-信息整合错误", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-信息缺失", "信息性-图片组件-低质", "信息性-图片组件-缺失", "信息性-cite组件-归属错误"], "tag_count": 8, "verdict": "fail", "t1_residual": ["可读性-基础表达瑕疵"], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配"], "elapsed": 73.5, "refine_success": true}, {"case_id": "CHAT_031ab627cf8e0cff985b123a7f0d7534ebb03b9be0b7404f616803653c655e2c", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错"], "tag_count": 2, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错"], "elapsed": 14.4, "refine_success": true}, {"case_id": "CHAT_0282920d7efcc9dd5d0fe03ad021537e4122c90874ffa10579b610ccc4c3d26e", "has_issue": true, "hit_tags": ["准确性-多模理解错误-图片理解错", "准确性-工具调用问题-策略不好"], "tag_count": 2, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-工具调用问题-策略不好", "信息性-图片组件-遗漏"], "elapsed": 35.5, "refine_success": true}, {"case_id": "CHAT_04b9c6ee55cf72666519f9595060bebb980acf6eac67b028368a8b5adbf2ba7c", "has_issue": true, "hit_tags": ["准确性-幻觉", "信息性-信息整合不足-数量少", "信息性-图片组件-缺失"], "tag_count": 3, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 52.3, "refine_success": true}, {"case_id": "CHAT_03ab0ebf32d9074832223ab1665c88da96089d361e573dbac1c67c5500601502", "has_issue": true, "hit_tags": ["需求理解-上下文理解-错误关联", "准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-信息缺失"], "tag_count": 5, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": ["需求理解-上下文理解-错误关联", "准确性-上下文不一致-图片错配", "准确性-多模理解错误-图片理解错", "准确性-工具调用问题-参数不好"], "elapsed": 31.0, "refine_success": true}, {"case_id": "CHAT_049014fffbf9d688874c6a4acd8044a45acd0d4032cec75bb0522d79b6321340", "has_issue": true, "hit_tags": ["准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 2, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-幻觉", "准确性-信息整合错误", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-工具调用问题-参数不好", "信息性-图片组件-低质"], "elapsed": 62.3, "refine_success": true}, {"case_id": "CHAT_0534126ef024c31335de53ce976ec2fe189c162704bd9f4e75626220457e743d", "has_issue": true, "hit_tags": ["准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 2, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 56.3, "refine_success": true}, {"case_id": "CHAT_03c6e19dae50f371685b6b9e8da44ab4b92e46f7059dfc751a8d7d745cb6e8c1", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致-图片错配", "准确性-工具调用问题-参数不好", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "fail", "t1_residual": ["可读性-基础表达瑕疵"], "t2_residual": ["准确性-幻觉", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 53.7, "refine_success": true}, {"case_id": "CHAT_062d74135432134e1e36652278f274407b7d5c2cfbfa558d20ebfa3c1e6d82c8", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-工具调用问题-策略不好", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-数量少", "信息性-图片组件-遗漏", "信息性-cite组件-遗漏"], "tag_count": 7, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 67.0, "refine_success": true}, {"case_id": "CHAT_04eadf6ae94642eaaa319348a30f608a812ddf9311d861421901b1905aef026d", "has_issue": true, "hit_tags": ["准确性-工具调用问题-参数不好", "准确性-信息整合错误", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失", "信息性-工具调用-内容同质", "信息性-cite组件-遗漏"], "tag_count": 7, "verdict": "n/a", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 32.4, "refine_success": false}, {"case_id": "CHAT_0236eb5bec51967bac79baca136f63c3fa59857da1e611336229ce45fe9c1f9f", "has_issue": true, "hit_tags": ["准确性-内生知识错误-常识", "准确性-时间感知错误-信息过时", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "fail", "t1_residual": ["可读性-基础表达瑕疵"], "t2_residual": ["信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配"], "elapsed": 61.1, "refine_success": true}, {"case_id": "CHAT_050ba6082fd2fa35be43c17748b3a937ff9b37d28daa3d4d1ae113b46366efe7", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-信息整合错误", "准确性-上下文不一致-图片错配", "信息性-图片组件-低质"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-信息整合错误", "准确性-幻觉", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错"], "elapsed": 61.9, "refine_success": true}, {"case_id": "CHAT_0200c2dc0463f9bf77c38b52127e57d36d6b2af43d344bc3f83c6bdd02b88854", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-幻觉", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-信息缺失"], "tag_count": 6, "verdict": "fail", "t1_residual": ["准确性-内生知识错误-常识"], "t2_residual": ["信息性-信息整合不足-非主流答案"], "t3_persistent": ["准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配"], "elapsed": 65.8, "refine_success": true}, {"case_id": "CHAT_079639010e8f384438907b20726a9fa679de4494c74df4e9e866504b8be5be3f", "has_issue": true, "hit_tags": ["准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 2, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 64.6, "refine_success": true}, {"case_id": "CHAT_09914bb5ef960f611b178e5d7b1a29e9e505dbe064c76ff4d06a39f153963730", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-信息整合错误", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配"], "elapsed": 75.2, "refine_success": true}, {"case_id": "CHAT_010607a2c749d7dee3d7b1623537a714868627d28fb0274faf75af6aa67452a1", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-内生知识错误-自我认知"], "tag_count": 2, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": ["需求理解-意图理解", "准确性-工具调用问题-应调未调"], "elapsed": 16.9, "refine_success": true}, {"case_id": "CHAT_0882fe3b62a98a66802fe0ebd05073ef16c09d18606a24be835045ac4b71e47e", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 3, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配"], "elapsed": 54.3, "refine_success": true}, {"case_id": "CHAT_01f7be57bd09bc340f7060227ed7d8ffced1525a554838c5bfdb2c67b6fe7367", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-工具调用问题-参数不好", "信息性-信息整合不足-信息缺失", "信息性-图片组件-低质", "信息性-cite组件-遗漏"], "tag_count": 5, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-工具调用问题"], "t3_persistent": [], "elapsed": 67.4, "refine_success": true}, {"case_id": "CHAT_09c93b4e7bf4c10792b5b37a7c6143c1c084fe09e8c418bb2f7b85ccdd29fab2", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-信息整合错误", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失", "信息性-图片组件-低质"], "tag_count": 5, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-信息整合错误", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 57.8, "refine_success": true}, {"case_id": "CHAT_01f639a4f375a76989d6f990bb8af0e0cd1cb40ad1c4923082ca6e6c3d95fe39", "has_issue": true, "hit_tags": ["准确性-幻觉", "信息性-图片组件-低质", "信息性-信息整合不足-信息缺失"], "tag_count": 3, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 52.1, "refine_success": true}, {"case_id": "CHAT_03298f4fd59b0cda0b94170fc53770c407eef3648804fb1cc83338ff3473ba38", "has_issue": true, "hit_tags": ["信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失", "信息性-图片组件-低质"], "tag_count": 3, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配"], "elapsed": 56.2, "refine_success": true}, {"case_id": "CHAT_0ad82ea50ee5ae45366674fd4152467ce39b72d49040c63929c7c50a7fa1415b", "has_issue": true, "hit_tags": ["准确性-工具调用问题-应调未调", "准确性-上下文不一致-图片错配"], "tag_count": 2, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-上下文不一致-图片错配"], "elapsed": 42.3, "refine_success": true}, {"case_id": "CHAT_07441cec000c1bd5badaee88d004d0d40bc2e7291569951d9bde979ab058136b", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-数量少", "信息性-图片组件-低质"], "tag_count": 4, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 78.0, "refine_success": true}, {"case_id": "CHAT_008105713316a85e5eb1919b655829cdf0376040812bdd2c2e98b9a0ae452c3c", "has_issue": true, "hit_tags": ["准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 2, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-信息整合错误", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配", "信息性-图片组件-低质", "信息性-图片组件-遗漏"], "elapsed": 59.4, "refine_success": true}, {"case_id": "CHAT_014c812ac09b52e08d0e26f7d6b9df60c8415201513125982785514f4bc8b80f", "has_issue": true, "hit_tags": ["需求理解-上下文理解-错误关联", "准确性-信息整合错误", "准确性-工具调用问题-参数不好", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-上下文不一致-cite错配", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 75.6, "refine_success": true}, {"case_id": "CHAT_05ab8b2baf4d23da59d15e393511e728ba2d8539f7cb6151df9651f35716917e", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失", "信息性-图片组件-低质"], "tag_count": 4, "verdict": "fail", "t1_residual": ["准确性-内生知识错误-常识"], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 71.4, "refine_success": true}, {"case_id": "CHAT_004a44977d475b4463b5f910f435e7bc4541bf548ff83d86bfbf05f2b8a87c7d", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-信息整合错误", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "tag_count": 7, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-工具调用问题-参数不好"], "elapsed": 60.5, "refine_success": true}, {"case_id": "CHAT_00a31cba76df77b23322b32d5c8c11b8f735d124af6b0be0e79b279e045299c1", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-幻觉", "准确性-工具调用问题-参数不好", "可读性-基础表达瑕疵", "信息性-信息整合不足-信息缺失"], "tag_count": 6, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-上下文不一致-图片错配"], "elapsed": 98.9, "refine_success": true}, {"case_id": "CHAT_090d2ad4b62bd1e9f16fb6c35d619d53ba8f76be227814883dbec7339594aa39", "has_issue": true, "hit_tags": ["准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 2, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-幻觉", "准确性-信息整合错误", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配", "信息性-图片组件-缺失"], "elapsed": 66.3, "refine_success": true}, {"case_id": "CHAT_07f6274275a1f8928999513acf6dae5e24dec6dffecdb352f7e774e4dfbb5a83", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-上下文不一致-图片错配", "准确性-内生知识错误-常识", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-幻觉", "信息性-信息整合不足-信息缺失", "信息性-cite组件-归属错误"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 66.1, "refine_success": true}, {"case_id": "CHAT_015e1ee460d668f80582c183ae916eff63ee633d92f3c418459303b560d1bbba", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-幻觉", "准确性-信息整合错误", "准确性-工具调用问题-参数不好", "可读性-基础表达瑕疵", "信息性-信息整合不足-信息缺失"], "tag_count": 6, "verdict": "fail", "t1_residual": ["可读性-基础表达瑕疵"], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-上下文理解-未关联", "准确性-多模理解错误-图片理解错", "准确性-工具调用问题-参数不好"], "elapsed": 61.1, "refine_success": true}, {"case_id": "CHAT_090340a1116400d001da4895aefafdc19977d2d04a5a50c6ca5764c924ef582d", "has_issue": true, "hit_tags": ["准确性-工具调用问题-工具不好", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失", "信息性-图片组件-遗漏"], "tag_count": 5, "verdict": "fail", "t1_residual": ["需求理解-过度发散"], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-工具调用问题-工具不好", "准确性-工具调用问题-应调未调", "准确性-上下文不一致-图片错配"], "elapsed": 73.5, "refine_success": true}, {"case_id": "CHAT_00db96586e7a05504d4613d7949a90ef75322a0171b688a4876bf1297ca5612f", "has_issue": true, "hit_tags": ["准确性-信息整合错误", "可读性-基础表达瑕疵"], "tag_count": 2, "verdict": "fail", "t1_residual": ["准确性-内生知识错误-常识", "可读性-基础表达瑕疵"], "t2_residual": ["准确性-幻觉", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配", "准确性-工具调用问题-参数不好"], "elapsed": 53.2, "refine_success": true}, {"case_id": "CHAT_0ab05f3e77abedeaa987e7f95b3bace4ceb1ef88fe80e6d86022ef2bbb6cd01b", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-幻觉", "准确性-工具调用问题-工具不好", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-信息缺失"], "tag_count": 6, "verdict": "fail", "t1_residual": ["需求理解-过度发散", "可读性-基础表达瑕疵"], "t2_residual": ["信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-指令遵循", "准确性-上下文不一致-图片错配"], "elapsed": 80.3, "refine_success": true}, {"case_id": "CHAT_05622a3bf5090fe6c95b3e6075c7c6707907757a8621a94249f9aead5a169081", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 3, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 69.2, "refine_success": true}, {"case_id": "CHAT_03846ab4dbaed6fd2899c67820fe2b5d89172453dada8b6f131dd30e98a22d52", "has_issue": true, "hit_tags": ["准确性-工具调用问题-工具不好", "准确性-时间感知错误-信息过时", "信息性-信息整合不足-信息缺失", "信息性-cite组件-遗漏"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-上下文不一致-cite错配", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-工具调用问题-参数不好", "准确性-上下文不一致-图片错配"], "elapsed": 71.4, "refine_success": true}, {"case_id": "CHAT_0201aabae60495a3ea80ab38c8a6a818fdb022cdd444bbcf3d2df3845a1ec256", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致-图片错配"], "tag_count": 2, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配", "信息性-图片组件-低质"], "elapsed": 53.6, "refine_success": true}, {"case_id": "CHAT_0117e4e84eff6cf434236ac237e387cc68d26ad8d7d4d8e0d07de833e93abef3", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-幻觉", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失", "信息性-图片组件-低质"], "tag_count": 7, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 58.4, "refine_success": true}, {"case_id": "CHAT_0a80d0182b2a2acb8ba9fb681b77a1110331170c84a1cc712b4af928983d5f91", "has_issue": false, "hit_tags": [], "tag_count": 0, "verdict": "n/a", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 13.6, "refine_success": false}, {"case_id": "CHAT_0ad0c12cc839050cf5c67f1f3c6f0d8bb0591a3cdb86625ff93f0436fc4149ca", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致-图片错配", "信息性-图片组件-缺失", "信息性-cite组件-归属错误"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-信息整合错误", "信息性-图片组件-错配"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 69.5, "refine_success": true}, {"case_id": "CHAT_02c0f3f5fb0bba4f5817f928a1080c0cfee5ab1591ac61e469dad430697cdf7a", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-信息整合错误", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配"], "elapsed": 69.1, "refine_success": true}, {"case_id": "CHAT_0a53a04ddc0f65be5b62e472c606b30482b580bc3604514ec691ffa5f093e1dc", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失", "信息性-cite组件-遗漏"], "tag_count": 5, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-信息整合错误", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配", "信息性-图片组件-低质"], "elapsed": 91.4, "refine_success": true}, {"case_id": "CHAT_071119b9df6ca4dea0132698ff19728da4139d14aff62c08008467bc8dd14332", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-幻觉", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-信息缺失"], "tag_count": 5, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-信息整合错误", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 83.0, "refine_success": true}, {"case_id": "CHAT_03d739396089892796bf33ffa5c78dca8e476b80891bad9aad57b5c55b467c74", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-工具调用问题-参数不好", "信息性-信息整合不足-信息缺失", "信息性-图片组件-缺失"], "tag_count": 4, "verdict": "fail", "t1_residual": ["可读性-基础表达瑕疵"], "t2_residual": ["准确性-幻觉", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配", "信息性-工具调用-信息缺失"], "elapsed": 60.5, "refine_success": true}, {"case_id": "CHAT_08f36a4645a00e9714b84975277f4c9c1d227a0a15ba674a1782dd69b4e63b3b", "has_issue": true, "hit_tags": ["需求理解-上下文理解-未关联", "信息性-信息整合不足-内容同质"], "tag_count": 2, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-内容同质"], "t3_persistent": ["需求理解-意图理解"], "elapsed": 21.5, "refine_success": true}, {"case_id": "CHAT_0060bfca93efee78c8ea38f91f0eb6594e491ca5ca25d90851fa262e38f0dd6c", "has_issue": true, "hit_tags": ["需求理解-指令遵循", "准确性-幻觉", "可读性-基础表达瑕疵", "信息性-图片组件-遗漏"], "tag_count": 4, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": ["需求理解-意图理解", "准确性-多模理解错误-图片理解错", "准确性-上下文不一致-图片错配", "信息性-图片组件-低质"], "elapsed": 26.9, "refine_success": true}, {"case_id": "CHAT_00f3d8c8ee1ec1b61be2436a2a6f7225ddb1b43bbf0bf19eeb31e46e3ec2f29e", "has_issue": true, "hit_tags": ["需求理解-指令遵循", "准确性-幻觉", "准确性-信息整合错误", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失", "信息性-图片组件-低质", "信息性-图片组件-遗漏"], "tag_count": 7, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配", "信息性-图片组件-低质"], "elapsed": 106.7, "refine_success": true}, {"case_id": "CHAT_03725e9c3dcb88861b0dc6764982f53a5378c8a85fdaa058076073b2a2476d9c", "has_issue": true, "hit_tags": ["准确性-多模理解错误-图片理解错", "准确性-幻觉", "准确性-工具调用问题-参数不好", "准确性-信息整合错误", "信息性-信息整合不足-信息缺失", "信息性-图片组件-低质"], "tag_count": 6, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-幻觉", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 61.3, "refine_success": true}, {"case_id": "CHAT_095f13638b4341a7d4cde263a53f9cc7c36ecc2a28ef36410ef9553b2303b64e", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-内生知识错误-常识", "准确性-时间感知错误-信息过时", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失", "信息性-图片组件-低质", "信息性-cite组件-遗漏"], "tag_count": 7, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 77.2, "refine_success": true}, {"case_id": "CHAT_02252109cc0cede9ed610365f4f67230ce2584e2e627294ddafc096a37be06e2", "has_issue": true, "hit_tags": ["需求理解-上下文理解-未关联", "准确性-上下文不一致-图片错配", "可读性-基础表达瑕疵", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": [], "elapsed": 72.9, "refine_success": true}, {"case_id": "CHAT_0a8ba15705f65979c6f859b63de5aa14059fa5bdcef69ff4f1d0ddca524d3214", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 3, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 59.8, "refine_success": true}, {"case_id": "CHAT_032f5b12779ddaa1e9155388e57ba872ee2bd8fb1cbd1f6fffee9d597ab2055f", "has_issue": true, "hit_tags": ["准确性-信息整合错误", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-幻觉", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配", "信息性-图片组件-遗漏"], "elapsed": 56.8, "refine_success": true}, {"case_id": "CHAT_0a4de5bab2ef88450ba7789dbd77917b402cdf85081b29b6c2d1d134a94e23fd", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致-图片错配", "准确性-工具调用问题-参数不好", "可读性-基础表达瑕疵", "信息性-信息整合不足-内容同质", "信息性-信息整合不足-信息缺失"], "tag_count": 6, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-信息整合错误", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-多模理解错误-图片理解错", "信息性-图片组件-低质"], "elapsed": 104.6, "refine_success": true}, {"case_id": "CHAT_0977112546922900a0cb70b3feaedfa13f6bc698430ed545d2b77df4cbe75424", "has_issue": true, "hit_tags": ["需求理解-意图理解", "准确性-幻觉", "信息性-信息整合不足-信息缺失", "信息性-图片组件-缺失"], "tag_count": 4, "verdict": "fail", "t1_residual": ["准确性-内生知识错误-常识"], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-意图理解", "准确性-上下文不一致-图片错配", "信息性-图片组件-低质"], "elapsed": 61.9, "refine_success": true}, {"case_id": "CHAT_09eefae60b1c199082c0c68d96a40c972094f62dd481db9f749751becf53fd5c", "has_issue": true, "hit_tags": ["准确性-幻觉", "准确性-上下文不一致", "信息性-图片组件-低质"], "tag_count": 3, "verdict": "pass", "t1_residual": [], "t2_residual": [], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 54.7, "refine_success": true}, {"case_id": "CHAT_028f7515b9155aacf2f40f186731e19059b7079b56d530c20942f02d82e52499", "has_issue": true, "hit_tags": ["准确性-信息整合错误", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 3, "verdict": "fail", "t1_residual": ["可读性-基础表达瑕疵"], "t2_residual": ["准确性-幻觉", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 63.6, "refine_success": true}, {"case_id": "CHAT_01e2ea4185223a5908bb8f86ede6748c318b84b7c57b00ebbc0382b4bad885b4", "has_issue": true, "hit_tags": ["准确性-多模理解错误-图片理解错", "准确性-内生知识错误-常识", "准确性-幻觉", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "fail", "t1_residual": ["准确性-内生知识错误-常识"], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配"], "elapsed": 52.3, "refine_success": true}, {"case_id": "CHAT_00326df2dd04e0412c657a522f59d786bd1fd16fc3a67eff9c726571faee330c", "has_issue": true, "hit_tags": ["准确性-幻觉", "信息性-信息整合不足-数量少", "信息性-图片组件-缺失", "信息性-信息整合不足-信息缺失"], "tag_count": 4, "verdict": "partial", "t1_residual": [], "t2_residual": ["准确性-信息整合错误", "信息性-信息整合不足-数量少", "信息性-信息整合不足-信息缺失"], "t3_persistent": ["准确性-上下文不一致-图片错配", "信息性-图片组件-缺失"], "elapsed": 81.2, "refine_success": true}, {"case_id": "CHAT_0a028a6f58f0124d83c1d15f1b8e183ddcb618209810429c113b18ac7f4e5915", "has_issue": false, "hit_tags": [], "tag_count": 0, "verdict": "n/a", "t1_residual": [], "t2_residual": [], "t3_persistent": [], "elapsed": 71.0, "refine_success": false}, {"case_id": "CHAT_09dcdf608cc8a87ffe8c5137079269eb31d47c4dc619d7be8b11dd60801d5776", "has_issue": true, "hit_tags": ["需求理解-过度发散", "准确性-上下文不一致-图片错配", "信息性-信息整合不足-信息缺失"], "tag_count": 3, "verdict": "partial", "t1_residual": [], "t2_residual": ["信息性-信息整合不足-信息缺失"], "t3_persistent": ["需求理解-指令遵循", "准确性-上下文不一致-图片错配"], "elapsed": 58.7, "refine_success": true}]};
+
+// ── Chart.js defaults ──
+Chart.defaults.color = '#9ca0b4';
+Chart.defaults.borderColor = '#2e3347';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif";
+
+const COLORS = {
+  green: '#00cec9', yellow: '#fdcb6e', red: '#ff7675',
+  blue: '#74b9ff', purple: '#a29bfe', orange: '#e17055',
+  pink: '#fd79a8', accent: '#6c5ce7',
+};
+
+// ── Header ──
+document.getElementById('h-cases').textContent = `${DATA.meta.completed} / ${DATA.meta.total_cases}`;
+document.getElementById('h-model').textContent = DATA.meta.model;
+document.getElementById('h-date').textContent = new Date().toLocaleDateString('zh-CN');
+document.getElementById('h-duration').textContent = `${(DATA.timing.total_seconds/60).toFixed(0)} min`;
+
+// ── KPIs ──
+const kpiRow = document.getElementById('kpi-row');
+const kpis = [
+  { n: DATA.overview.has_issue, label: '有问题 Case', sub: `${(DATA.overview.has_issue/DATA.meta.completed*100).toFixed(0)}%`, cls: 'red' },
+  { n: DATA.overview.total_tags, label: '命中标签总数', sub: `${DATA.overview.avg_tags} / case`, cls: 'yellow' },
+  { n: `${((DATA.verdicts.pass||0)+(DATA.verdicts.partial||0))}`, label: 'Pass + Partial', sub: `${(((DATA.verdicts.pass||0)+(DATA.verdicts.partial||0))/DATA.meta.completed*100).toFixed(0)}% 有效修复`, cls: 'green' },
+  { n: `${DATA.timing.avg}s`, label: '平均耗时 / Case', sub: `${DATA.timing.min}s ~ ${DATA.timing.max}s`, cls: 'blue' },
+];
+kpis.forEach(k => {
+  kpiRow.innerHTML += `<div class="kpi ${k.cls}">
+    <div class="number">${k.n}</div>
+    <div class="label">${k.label}</div>
+    <div class="sub">${k.sub}</div>
+  </div>`;
+});
+
+// ── Verdict Bar ──
+const vColors = { pass: COLORS.green, partial: COLORS.yellow, fail: COLORS.red, 'n/a': '#555' };
+const vLabels = { pass: 'Pass', partial: 'Partial', fail: 'Fail', 'n/a': 'N/A' };
+const vDesc = { pass: '所有可修复标签已清除', partial: 'Tier 1 清除，Tier 2 残留', fail: 'Tier 1 仍未修复', 'n/a': '无需修复 / 修复失败' };
+const vBar = document.getElementById('verdict-bar');
+const vLeg = document.getElementById('verdict-legend');
+const total = DATA.meta.completed;
+['pass','partial','fail','n/a'].forEach(v => {
+  const cnt = DATA.verdicts[v] || 0;
+  const pct = (cnt/total*100).toFixed(1);
+  if (cnt > 0) {
+    vBar.innerHTML += `<div class="seg" style="width:${pct}%;background:${vColors[v]}" title="${vLabels[v]}: ${cnt} (${pct}%)">${cnt}</div>`;
+  }
+  vLeg.innerHTML += `<div class="legend-item"><div class="legend-dot" style="background:${vColors[v]}"></div>${vLabels[v]} ${cnt} (${pct}%) — ${vDesc[v]}</div>`;
+});
+document.getElementById('verdict-badge').textContent =
+  `${(((DATA.verdicts.pass||0)+(DATA.verdicts.partial||0))/total*100).toFixed(0)}% 有效`;
+document.getElementById('verdict-insight').innerHTML =
+  `<strong>Pass + Partial = ${(DATA.verdicts.pass||0)+(DATA.verdicts.partial||0)} case（${(((DATA.verdicts.pass||0)+(DATA.verdicts.partial||0))/total*100).toFixed(1)}%）</strong>：
+   Refine 在多数 case 上完成了 Tier 1 修复。Fail 的 ${DATA.verdicts.fail||0} 个 case 主要是 Refine 引入了新的 Tier 1 标签（详见下方分析）。`;
+
+// ── Dimension Chart ──
+new Chart(document.getElementById('chart-dim'), {
+  type: 'doughnut',
+  data: {
+    labels: Object.keys(DATA.dimensions),
+    datasets: [{
+      data: Object.values(DATA.dimensions),
+      backgroundColor: [COLORS.red, COLORS.blue, COLORS.yellow, COLORS.green],
+      borderWidth: 0,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    aspectRatio: 1,
+    cutout: '55%',
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'rectRounded' } },
+    }
+  }
+});
+
+// ── Tier Chart ──
+const tierData = DATA.tier_counts;
+new Chart(document.getElementById('chart-tier'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Tier 1 可直接修复', 'Tier 2 可部分修复', 'Tier 3 不可修复'],
+    datasets: [{
+      data: [tierData['1'], tierData['2'], tierData['3']],
+      backgroundColor: [COLORS.green, COLORS.yellow, COLORS.red],
+      borderWidth: 0,
+      hoverOffset: 8,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: true,
+    aspectRatio: 1,
+    cutout: '55%',
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true, pointStyle: 'rectRounded' } },
+    }
+  }
+});
+
+// ── Top Tags Chart ──
+const tagEntries = Object.entries(DATA.all_tags).slice(0, 15);
+const tagColors = tagEntries.map(([tag]) => {
+  if (DATA.tier_tags['1'][tag]) return COLORS.green;
+  if (DATA.tier_tags['3'][tag]) return COLORS.red;
+  return COLORS.yellow;
+});
+document.getElementById('tag-total-badge').textContent = `${DATA.overview.total_tags} 标签命中`;
+new Chart(document.getElementById('chart-tags'), {
+  type: 'bar',
+  data: {
+    labels: tagEntries.map(([t]) => t.length > 18 ? t.slice(0,18) + '...' : t),
+    datasets: [{
+      data: tagEntries.map(([,v]) => v),
+      backgroundColor: tagColors,
+      borderRadius: 6,
+      barPercentage: 0.7,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          title: (items) => tagEntries[items[0].dataIndex][0],
+          label: (item) => {
+            const tag = tagEntries[item.dataIndex][0];
+            const t = DATA.tier_tags['1'][tag] ? 'Tier 1' : (DATA.tier_tags['3'][tag] ? 'Tier 3' : 'Tier 2');
+            return `${item.raw} 次 (${t})`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { display: false } }
+    }
+  }
+});
+
+// ── Refine KPIs ──
+const rk = document.getElementById('refine-kpis');
+rk.innerHTML = `
+  <div class="kpi green"><div class="number">${DATA.overview.improved}</div><div class="label">标签减少</div><div class="sub">${(DATA.overview.improved/(DATA.overview.improved+DATA.overview.same+DATA.overview.worsened)*100).toFixed(0)}%</div></div>
+  <div class="kpi yellow"><div class="number">${DATA.overview.same}</div><div class="label">标签不变</div><div class="sub">${(DATA.overview.same/(DATA.overview.improved+DATA.overview.same+DATA.overview.worsened)*100).toFixed(0)}%</div></div>
+  <div class="kpi red"><div class="number">${DATA.overview.worsened}</div><div class="label">标签增加</div><div class="sub">${(DATA.overview.worsened/(DATA.overview.improved+DATA.overview.same+DATA.overview.worsened)*100).toFixed(0)}%</div></div>
+`;
+
+// ── Fix Rates ──
+function renderFixRates(tierKey, containerId, residualData) {
+  const el = document.getElementById(containerId);
+  const tags = DATA.tier_tags[tierKey];
+  Object.entries(tags).sort((a,b) => b[1]-a[1]).forEach(([tag, orig]) => {
+    const res = residualData[tag] || 0;
+    const rate = orig > 0 ? Math.max(0, ((orig-res)/orig*100)) : 0;
+    const barColor = rate >= 80 ? COLORS.green : (rate >= 40 ? COLORS.yellow : COLORS.red);
+    const displayRate = orig > 0 ? ((orig-res)/orig*100).toFixed(0) : '0';
+    el.innerHTML += `<div class="progress-row">
+      <div class="progress-label">${tag}</div>
+      <div class="progress-track">
+        <div class="progress-fill" style="width:${Math.max(0,rate)}%;background:${barColor}">${displayRate}%</div>
+      </div>
+      <div class="progress-count">${orig} → ${res}</div>
+    </div>`;
+  });
+}
+renderFixRates('1', 'tier1-fix-rates', DATA.t1_residual);
+renderFixRates('2', 'tier2-fix-rates', DATA.t2_residual);
+
+// ── New Tags Table ──
+const ntEl = document.getElementById('new-tags-table');
+let ntHtml = '<table><thead><tr><th>新增标签</th><th>引入次数</th><th>Tier</th><th>影响</th></tr></thead><tbody>';
+const ntImpact = {
+  '准确性-上下文不一致-图片错配': '修改文案后与原图不再匹配',
+  '准确性-多模理解错误-图片理解错': 'Tier 3，不影响 verdict 判定',
+  '信息性-信息整合不足-数量少': '补充方案数量仍不达标',
+  '信息性-信息整合不足-信息缺失': '修复后仍缺具体信息',
+  '可读性-基础表达瑕疵': '修改时引入新的语病/术语',
+  '准确性-内生知识错误-常识': '修复时引入新的红线违规',
+  '准确性-幻觉': '修复时编造了新信息',
+  '需求理解-意图理解': 'Tier 3，不影响判定',
+  '准确性-信息整合错误': '修复时引用关系出错',
+  '信息性-cite组件-归属错误': 'cite 归属关系被打乱',
+};
+Object.entries(DATA.new_tags_from_refine).forEach(([tag, cnt]) => {
+  const t = DATA.tier_tags['1'][tag] ? 1 : (DATA.tier_tags['3'][tag] ? 3 : 2);
+  const cls = `tier-${t}`;
+  ntHtml += `<tr><td>${tag}</td><td>${cnt}</td><td><span class="tag-tier ${cls}">Tier ${t}</span></td><td style="color:var(--text2)">${ntImpact[tag]||''}</td></tr>`;
+});
+ntHtml += '</tbody></table>';
+ntEl.innerHTML = ntHtml;
+
+// ── Pipeline Flow ──
+const pf = document.getElementById('pipeline-flow');
+const pNodes = [
+  { name: 'IntentAgent', desc: '意图分析', count: DATA.pipeline_attribution['IntentAgent'], color: COLORS.orange },
+  { name: 'ReactAgent', desc: '搜索+素材整合', count: DATA.pipeline_attribution['ReactAgent'], color: COLORS.yellow },
+  { name: '多模态/图片', desc: '图片理解与匹配', count: DATA.pipeline_attribution['多模态/图片'], color: COLORS.red },
+];
+pNodes.forEach((p, i) => {
+  if (i > 0) pf.innerHTML += `<div class="pipeline-arrow">→</div>`;
+  pf.innerHTML += `<div class="pipeline-node" style="border-color:${p.color};background:${p.color}15">
+    <div class="node-name" style="color:${p.color}">${p.name}</div>
+    <div class="node-desc">${p.desc}</div>
+    <div class="node-count" style="color:${p.color}">${p.count}</div>
+    <div class="node-desc">Tier 3 标签</div>
+  </div>`;
+});
+
+// ── Pipeline Chart ──
+new Chart(document.getElementById('chart-pipeline'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys(DATA.pipeline_attribution),
+    datasets: [{
+      data: Object.values(DATA.pipeline_attribution),
+      backgroundColor: [COLORS.orange, COLORS.yellow, COLORS.red, '#555'],
+      borderRadius: 8,
+      barPercentage: 0.6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { display: false }, beginAtZero: true },
+      x: { grid: { display: false } },
+    }
+  }
+});
+
+// ── Recommendations ──
+const recEl = document.getElementById('recommendations');
+const recs = [
+  { level: 'danger', title: '【紧急】优化 Refine PE 自检环节',
+    body: `Refine 引入 <code>基础表达瑕疵</code>（×${DATA.new_tags_from_refine['可读性-基础表达瑕疵']||0}）和 <code>内生知识错误-常识</code>（×${DATA.new_tags_from_refine['准确性-内生知识错误-常识']||0}），是 fail verdict 的主因。建议强化 Step 4 自检中的红线检查和语言检查。` },
+  { level: 'warning', title: '【重要】提升图文匹配质量',
+    body: `<code>图片错配</code> ${DATA.all_tags['准确性-上下文不一致-图片错配']||0} 次 + <code>图片低质</code> ${DATA.all_tags['信息性-图片组件-低质']||0} 次 = Tier 3 最大来源。建议在 ReportAgent 中引入图文一致性校验。` },
+  { level: 'warning', title: '【重要】补充 obs 信息密度',
+    body: `<code>信息缺失</code> ${DATA.all_tags['信息性-信息整合不足-信息缺失']||0} 次（最高频标签），且 Refine 难以修复。建议 ReactAgent 增加品牌/价格/面料维度的信息抓取。` },
+  { level: 'info', title: '【建议】IntentAgent 场景分类优化',
+    body: `<code>意图理解</code> ${DATA.all_tags['需求理解-意图理解']||0} 次。建议增加穿搭场景二级分类（搭配/诊断/搜索/对比），减少方向性错误。` },
+];
+recs.forEach(r => {
+  recEl.innerHTML += `<div class="insight ${r.level}" style="margin-bottom:12px">
+    <strong>${r.title}</strong><br>${r.body}
+  </div>`;
+});
+
+// ── Case Detail Table ──
+const ctEl = document.getElementById('case-table');
+document.getElementById('case-count-badge').textContent = `${DATA.case_details.length} cases`;
+let ctHtml = `<table><thead><tr>
+  <th>#</th><th>Case ID</th><th>Tags</th><th>Verdict</th>
+  <th>T1 残留</th><th>T2 残留</th><th>T3 持续</th><th>耗时</th>
+</tr></thead><tbody>`;
+
+const verdictDot = { pass: COLORS.green, partial: COLORS.yellow, fail: COLORS.red, 'n/a': '#555' };
+DATA.case_details.forEach((c, i) => {
+  const tags = c.hit_tags.map(t => {
+    const tier = DATA.tier_tags['1'][t] ? 1 : (DATA.tier_tags['3'][t] ? 3 : 2);
+    return `<span class="tag-tier tier-${tier}" style="margin:1px">${t}</span>`;
+  }).join(' ');
+  const t1r = c.t1_residual.map(t => `<span class="tag-tier tier-1" style="margin:1px">${t}</span>`).join(' ') || '—';
+  const t2r = c.t2_residual.map(t => `<span class="tag-tier tier-2" style="margin:1px">${t}</span>`).join(' ') || '—';
+  const t3p = c.t3_persistent.length || '—';
+  ctHtml += `<tr>
+    <td>${i+1}</td>
+    <td style="font-family:monospace;font-size:11px">${c.case_id.slice(0,28)}</td>
+    <td style="white-space:normal;max-width:300px">${tags||'—'}</td>
+    <td><span class="status-dot" style="background:${verdictDot[c.verdict]}"></span>${c.verdict}</td>
+    <td style="white-space:normal">${t1r}</td>
+    <td style="white-space:normal">${t2r}</td>
+    <td>${t3p}</td>
+    <td>${c.elapsed.toFixed(0)}s</td>
+  </tr>`;
+});
+ctHtml += '</tbody></table>';
+ctEl.innerHTML = ctHtml;
+</script>
+</body>
+</html>
