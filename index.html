@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fashion Critic-Refine Pipeline Report</title>
+<title>Fashion Critic-Refine Pipeline Report</title><script>
+(function(){
+  var k=new URLSearchParams(location.search).get('k');
+  var valid=false;
+  if(k){try{var d=JSON.parse(atob(k));if(d.e&&Date.now()<=d.e){valid=true;try{fetch('https://script.google.com/macros/s/AKfycbz7lOqxY-jP2-coqmbhzgudUDEUMh-RCsxif-9ut_6dvcOHWX2mMRotbUqw9Z1jNLZQYw/exec',{method:'POST',mode:'no-cors',body:JSON.stringify({ref:d.r||'',referrer:document.referrer||'',ua:navigator.userAgent,lang:navigator.language,screen:screen.width+'x'+screen.height})});}catch(x){}}}catch(e){}}
+  if(!valid){document.write('<html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#0f1117;font-family:system-ui,sans-serif;color:#6b7094;flex-direction:column;gap:12px"><div style="font-size:72px;font-weight:700;color:#2e3347">404<\/div><div>This page does not exist.<\/div><\/body><\/html>');document.close();}
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
   :root {
@@ -412,25 +419,7 @@
   }
 </style>
 </head>
-<body><style>html{display:none}</style>
-<script>
-(function(){
-  var k=new URLSearchParams(location.search).get('k');
-  if(!k){show404();return;}
-  var d;
-  try{d=JSON.parse(atob(k));}catch(e){show404();return;}
-  if(!d.e||Date.now()>d.e){show404();return;}
-  document.addEventListener('DOMContentLoaded',function(){document.documentElement.style.display='block';});
-  try{fetch('https://script.google.com/macros/s/AKfycbz7lOqxY-jP2-coqmbhzgudUDEUMh-RCsxif-9ut_6dvcOHWX2mMRotbUqw9Z1jNLZQYw/exec',{method:'POST',mode:'no-cors',body:JSON.stringify({ref:d.r||'',referrer:document.referrer||'',ua:navigator.userAgent,lang:navigator.language,screen:screen.width+'x'+screen.height})});}catch(e){}
-  function show404(){
-    document.addEventListener('DOMContentLoaded',function(){
-      document.title='404 — Not Found';
-      document.documentElement.style.display='block';
-      document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0f1117;font-family:system-ui,sans-serif;color:#6b7094;flex-direction:column;gap:12px"><div style="font-size:72px;font-weight:700;color:#2e3347">404</div><div>This page does not exist.</div></div>';
-    });
-  }
-})();
-</script>
+<body>
 
 <div class="container">
 
