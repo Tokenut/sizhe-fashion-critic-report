@@ -414,10 +414,15 @@
 </head>
 <body><script>
 (function(){
-  var k=new URLSearchParams(location.search).get('k');
+  var p=new URLSearchParams(location.search);
+  var k=p.get('k');
   if(!k){show404();return;}
-  try{var d=JSON.parse(atob(k));if(!d.e||Date.now()>d.e){show404();return;}}catch(e){show404();return;}
+  var d;
+  try{d=JSON.parse(atob(k));}catch(e){show404();return;}
+  if(!d.e||Date.now()>d.e){show404();return;}
   document.documentElement.style.display='';
+  // Track visit
+  try{fetch('https://script.google.com/macros/s/AKfycbz7lOqxY-jP2-coqmbhzgudUDEUMh-RCsxif-9ut_6dvcOHWX2mMRotbUqw9Z1jNLZQYw/exec',{method:'POST',mode:'no-cors',body:JSON.stringify({ref:d.r||'',referrer:document.referrer||'',ua:navigator.userAgent,lang:navigator.language,screen:screen.width+'x'+screen.height})});}catch(e){}
   function show404(){
     document.title='404 — Not Found';
     document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0f1117;font-family:system-ui,sans-serif;color:#6b7094;flex-direction:column;gap:12px"><div style="font-size:72px;font-weight:700;color:#2e3347">404</div><div>This page does not exist.</div></div>';
