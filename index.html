@@ -412,7 +412,27 @@
   }
 </style>
 </head>
-<body>
+<body><script>
+(function(){
+  var k = new URLSearchParams(location.search).get('k');
+  if (!k) { show404(); return; }
+  try {
+    var d = JSON.parse(atob(k));
+    if (!d.e || Date.now() > d.e) { showExpired(); return; }
+  } catch(e) { show404(); return; }
+  document.documentElement.style.display = '';
+
+  function show404() {
+    document.title = '404 — Not Found';
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0f1117;font-family:system-ui,sans-serif;color:#6b7094;flex-direction:column;gap:12px"><div style="font-size:72px;font-weight:700;color:#2e3347">404</div><div>This page does not exist.</div></div>';
+  }
+  function showExpired() {
+    document.title = 'Link Expired';
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0f1117;font-family:system-ui,sans-serif;color:#6b7094;flex-direction:column;gap:12px"><div style="font-size:72px;font-weight:700;color:#2e3347">Expired</div><div>This link is no longer valid. Please request a new one.</div></div>';
+  }
+})();
+</script>
+<style>html{display:none}</style>
 
 <div class="container">
 
