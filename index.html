@@ -1033,13 +1033,17 @@ function openCompare(shortId){
     while((qm=imgRe2.exec(d.q))!==null) qImgs.push(qm[1]);
     qHtml = '<div><div class="cmp-query-label">User Query</div><div class="cmp-query-text">' + escHtml(qText) + '</div></div>';
     if(qImgs.length){
-      qImgs.forEach(function(url){
-        qHtml = '<img class="cmp-query-img" src="'+escHtml(url)+'" onclick="event.stopPropagation();openLightbox(''+url.replace(/'/g,"\\'")+'')" onerror="this.style.display=\'none\'">' + qHtml;
+      qImgs.forEach(function(url,idx){
+        var imgId = 'qimg-'+idx;
+        qHtml = '<img class="cmp-query-img" id="'+imgId+'" src="'+escHtml(url)+'" data-full="'+escHtml(url)+'" onerror="this.style.display=\'none\'">' + qHtml;
       });
     }
   }
   document.getElementById('cmpQuery').innerHTML = qHtml;
   document.getElementById('cmpQuery').style.display = qHtml ? '' : 'none';
+  document.querySelectorAll('.cmp-query-img').forEach(function(img){
+    img.onclick = function(e){ e.stopPropagation(); openLightbox(this.getAttribute('data-full')); };
+  });
 
   // Fix stats
   var t1=caseInfo?caseInfo.t1_residual.length:0, t2=caseInfo?caseInfo.t2_residual.length:0, t3=caseInfo?caseInfo.t3_persistent.length:0;
