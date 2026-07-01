@@ -988,7 +988,7 @@ function md2html(text){
     if(line.trim()==='') continue;
 
     // Image placeholder (already processed)
-    if(line.indexOf('rc-img-placeholder')>=0){ result+=line; continue; }
+    if(line.indexOf('rc-img-placeholder')>=0 || line.indexOf('rc-img-wrap')>=0){ result+=line; continue; }
 
     // Regular paragraph
     result+='<p>'+inlineMd(line)+'</p>';
