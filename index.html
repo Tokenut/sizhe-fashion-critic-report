@@ -949,7 +949,7 @@ function md2html(text){
     var cleanId = id.replace(/^"|"$/g,'');
     var url = _currentImgMap[cleanId] || _currentImgMap[id];
     if(url){
-      return '<div class="rc-img-wrap"><img class="rc-img" src="'+escHtml(url)+'" alt="'+escHtml(cleanId)+'" loading="lazy" onclick="openLightbox(this.src)" onerror="this.parentNode.innerHTML=\'<div class=rc-img-placeholder>'+escHtml(cleanId)+'</div>\'"></div>';
+      return '<div class="rc-img-wrap"><img class="rc-img" src="'+escHtml(url)+'" alt="'+escHtml(cleanId)+'" loading="lazy" referrerpolicy="no-referrer" onclick="openLightbox(this.src)" onerror="this.parentNode.innerHTML=\'<div class=rc-img-placeholder>'+escHtml(cleanId)+'</div>\'"></div>';
     }
     return '<div class="rc-img-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>' + escHtml(cleanId) + '</div>';
   });
